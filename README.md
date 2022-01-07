@@ -15,14 +15,11 @@ detach("package:MFSelector", unload=TRUE)
 # Read R code of Monotonic Feature Selector
 source("MFSelector_doSNOW.r")
 
-# Detect computing cores in the current machine
-total_cores <- detectCores()
-
-# Half of total cores
-half_cores <- total_cores/2
+# Assign cores to use
+cores <- 2
 
 # Run MFSelector with half of total cores
-mfselector(data, nsc, stageord = F, stagename = F, type = 1, nline = T, dline = T, pdf = 1:100, cmp = 0, permut = 100, svdenoise = 0.03, svdetimes = 4, cores = half_cores)
+mfselector(data, nsc, stageord = F, stagename = F, type = 1, nline = T, dline = T, pdf = 1:100, cmp = 0, permut = 100, svdenoise = 0.03, svdetimes = 4, cores = cores)
 
 ```
 
