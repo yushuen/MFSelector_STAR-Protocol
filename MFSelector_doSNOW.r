@@ -91,7 +91,16 @@ mfselector <- function (data, nsc, stageord = F, stagename = F, type = 1, nline 
         return(c(vec_BCT, point))
     }
 
-    all_info <- mclapply(t_data, mainfun, samples, classes, Class_Tag, type, mc.cores = cores)
+    cl<-makeCluster(cores, type = 'SOCK')
+    registerDoSNOW(cl)
+
+    G <- ncol(t_data)
+    all_info <- vector(length = G)
+    all_info <- foreach(i = icount(G)) %dopar% { 
+      all_info <- mainfun(t_data[, i], samples, classes, Class_Tag, type)
+    } 
+
+    stopCluster(cl) 
 
     nlines <- numeric(length = length(all_info))
     all_DE <- vector(length = length(all_info))
@@ -123,17 +132,43 @@ mfselector <- function (data, nsc, stageord = F, stagename = F, type = 1, nline 
             class_order_permu <- sample(sum(nsc))
             arranged_data_permu <- arranged_data[, class_order_permu]
             permu_data <- data.frame(t(arranged_data_permu))
-            permu_all_info <- t(as.data.frame(mclapply(permu_data, mainfun, samples, classes, Class_Tag, type, mc.cores = cores)))
-            all_DE <- cbind(all_DE, permu_all_info[, 1])
+            
+            cl <- makeCluster(cores, type = 'SOCK')
+            registerDoSNOW(cl)
+
+            G <- ncol(permu_data)
+            permu_all_info <- rep(NA, G)
+            permu_all_info <- foreach(i = icount(G)) %dopar% { 
+                permu_all_info <- mainfun(permu_data[, i], samples, classes, Class_Tag, type)
+            }    
+
+            stopCluster(cl) 
+
+            permu_all_info_mat <- do.call(rbind, permu_all_info)
+            all_DE <- cbind(all_DE, permu_all_info_mat[, 1])
         }
-        DE_pvalue <- rep(NA, nrow(permu_all_info))
-        DE_qvalue <- rep(NA, nrow(permu_all_info))
-        for (i in 1:nrow(permu_all_info)) {
-            DE_pvalue[i] <- length(which(all_DE[, -1] <= all_DE[i, 1]))/(nrow(permu_all_info) * permut)
-            DE_qvalue[i] <- min(length(which(all_DE[, -1] <= all_DE[i, 1]))/(length(which(all_DE[, 1] <= all_DE[i, 1])) * permut), 1)
-        }
-        DE <- all_DE[, 1]
-    }
+        all_DE <- as.matrix(all_DE)
+        mode(all_DE) <- "numeric"        
+
+        cl <- makeCluster(cores, type = 'SOCK')
+        registerDoSNOW(cl)
+
+        G <- nrow(mydata)
+        DE_pvalue <- rep(NA, G)
+        DE_qvalue <- rep(NA, G)
+
+        DE_pvalue <- foreach(i = icount(G)) %dopar% { 
+            DE_pvalue <- length(which(all_DE[, -1] <= all_DE[i, 1]))/(G * permut)
+        }    
+
+        DE_qvalue <- foreach(i = icount(G)) %dopar% {
+            DE_qvalue <- min(length(which(all_DE[, -1] <= all_DE[i, 1]))/(length(which(all_DE[, 1] <= all_DE[i, 1])) * permut), 1)
+        }  
+
+        stopCluster(cl)  
+ 
+        DE <- as.numeric(all_DE[, 1])
+      }
     else {
         DE <- all_DE
     }
@@ -143,8 +178,20 @@ mfselector <- function (data, nsc, stageord = F, stagename = F, type = 1, nline 
         for (j in 1:svdetimes) {
             data_noise <- nor_train[, 1:samples] + runif(dim(nor_train)[1] * samples, min = 0, max = 1) * svdenoise * sample(c(1, -1), dim(nor_train)[1] * samples, replace = T)
             t_nor_train <- as.data.frame(apply(data_noise, 1, nor))
-            all_info_noise <- t(as.data.frame(mclapply(t_nor_train, mainfun, samples, classes, Class_Tag, type, mc.cores = cores)))
-            diff_sqr <- cbind(diff_sqr, (DE - all_info_noise[, 1])^2)
+            
+            cl <- makeCluster(cores, type = 'SOCK')
+            registerDoSNOW(cl)
+
+            G <- ncol(t_nor_train)
+            all_info_noise <- rep(NA, G)
+            all_info_noise <- foreach(i = icount(G)) %dopar% { 
+                all_info_noise <- mainfun(t_nor_train[, i], samples, classes, Class_Tag, type)
+            }    
+
+            stopCluster(cl)  
+
+            all_info_noise_mat <- do.call(rbind, all_info_noise)
+            diff_sqr <- cbind(diff_sqr, (DE - all_info_noise_mat[, 1])^2)
         }
         conf <- function(x) {
             sum(x)/svdetimes
