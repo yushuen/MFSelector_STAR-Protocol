@@ -23,6 +23,9 @@ mfselector(data, nsc, stageord = F, stagename = F, type = 1, nline = T, dline = 
 
 ```
 
+A detailed step-by-step R commands for the example demonstrated in the STAR Protocol (Tsai et al, 2022) are also provided here: 
+`Tsai_2022_STAR-Protocol_R_Commands.R`
+
 ## Note
 * For details about the usage of MFSelector, please check the manual provided at [the official site](http://microarray.ym.edu.tw:8080/tools/module/MFSelector/index.jsp?mode=support).
 * Modifications we made are all tracked.
