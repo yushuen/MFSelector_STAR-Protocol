@@ -6,7 +6,7 @@
 
 ### "Before you begin" section
 ## Step 2a. Get version 3.15 of Bioconductor
-if (!require("BiocManager", quietly = TRUE)) 
+if(!require("BiocManager", quietly = TRUE)) 
 install.packages("BiocManager") 
 BiocManager::install(version = "3.15")
 
@@ -21,7 +21,7 @@ install.packages("MFSelector_1.0.tar.gz", repos = NULL, type = "source")
 ## Step 1a. Download the processed data (GSE140914_RAW.tar) from GEO with GEOquery package
 library(GEOquery)
 getGEOSuppFiles("GSE140914", makeDirectory = F)
-untar("GSE140914_RAW.tar", remove = FALSE)
+untar("GSE140914_RAW.tar")
 
 ## Step 1b. Extract files
 list.files(pattern = "gz$") |> lapply(gunzip)
@@ -37,7 +37,7 @@ gene_names <- data_list[[1]][, 2]
 gene_labels <- paste(gene_id, gene_names, sep = ":") 
 
 # Get sample names, batch information, group information 
-sample_names <- input_colnames[, 3] 
+sample_names <- sapply(data_list, \(x) colnames(x)[3]) 
 sample_names <- gsub("X", "", sample_names) 
 batch_id <- gsub("\\.\\S+", "", sample_names) 
 sample_group <- gsub("\\S+\\.", "", sample_names) 
@@ -96,7 +96,7 @@ source("MFSelector_doSNOW.r") # https://github.com/yushuen/MFSelector_STAR-Proto
 
 ## Step 3. Identify candidate descending monotonic key genes with MFSelecto
 mfselector(data, nsc, stageord = stageord, stagename = stagename, 
-type = 1, nline = T, dline = T, pdf = 1:100, cmp = 0, permut = 100, svdenoise = 0.03, svdetimes = 4, cores = half_cores) 
+  type = 1, nline = T, dline = T, pdf = 1:100, cmp = 0, permut = 100, svdenoise = 0.03, svdetimes = 4, cores = half_cores) 
 
 ## Step 4. Rename the output files
 mf_outputs <- list.files(pattern="^mfselector")
@@ -106,8 +106,7 @@ rm(mf_outputs, mf_outputs_type1)
 
 ## Step 5. Identify candidate ascending monotonic key genes
 mfselector(data, nsc, stageord = stageord, stagename = stagename, 
-type = 2, nline = T, dline = T, pdf = 1:100, cmp = 0, permut = 100, 
-svdenoise = 0.03,  svdetimes = 4, cores = half_cores)
+  type = 2, nline = T, dline = T, pdf = 1:100, cmp = 0, permut = 100, svdenoise = 0.03,  svdetimes = 4, cores = half_cores)
 
 ## Step 6. Rename the second output files
 mf_outputs <- list.files(pattern="^mfselector")
@@ -162,8 +161,7 @@ ward_hclust <- function(d){hclust(d, method = "ward.D")}
 
 # Define a function to generate a heatmap
 get_heatmap<-function(prefix, data, sample_group, gene_symbols = NULL, ...){
-  sample_col_fac <- as.factor(sample_group)
-    
+    sample_col_fac <- as.factor(sample_group)    
     n_group <- sample_group |> unique() |> length()                    
     dataZ <- apply(data, 1, z_transformation) |> t()
 
@@ -238,7 +236,7 @@ get_scatter_plots <- function(my_gene_id, data, gene_id, sample_group, mf_tab){
 }
 
 # Generate scatter plots with these candidate genes
-get_scatter_plots(MF_type1_genes[1], data_mat, gene_labels, >sample_group, mf_tab_1)
+get_scatter_plots(MF_type1_genes[1], data_mat, gene_labels, sample_group, mf_tab_1)
 ggsave("Figure_4.tiff", dpi = "retina") # Figure 4
 
 # If “parallel” package is available in your system, you can use “mclapply()” instead of “lapply()”
