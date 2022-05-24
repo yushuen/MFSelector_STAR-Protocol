@@ -14,7 +14,7 @@ BiocManager::install(version = "3.15")
 BiocManager::install(c("ggplot2", "gplots", "gridExtra", "RColorBrewer", "rtracklayer", "GEOquery", "biomaRt"))
 
 ## Step 3. Install MFSelector from source code
-download.file("http://microarray.ym.edu.tw:8080/tools/module/MFSelector/content/support/multicore/MFSelector_1.0.tar.gz", "MFSelector_1.0.tar.gz")
+download.file("http://microarray.bmi.nycu.edu.tw:8080/tools/module/MFSelector/content/support/multicore/MFSelector_1.0.tar.gz", "MFSelector_1.0.tar.gz")
 install.packages("MFSelector_1.0.tar.gz", repos = NULL, type = "source")
 
 ### "Step-by-step method details" section
@@ -31,17 +31,19 @@ list.files(pattern = "gz$") |> lapply(gunzip)
 data_list <- list.files(pattern="^GSM") |> lapply(read.delim, header = TRUE)
 data_mat <- sapply(data_list, \(x) x[, 3]) 
 
-# Get gene identifiers
-gene_id <- data_list[[1]][, 1] 
-gene_names <- data_list[[1]][, 2] 
-gene_labels <- paste(gene_id, gene_names, sep = ":") 
-
 # Get sample names, batch information, group information 
 sample_names <- sapply(data_list, \(x) colnames(x)[3]) 
 sample_names <- gsub("X", "", sample_names) 
 batch_id <- gsub("\\.\\S+", "", sample_names) 
 sample_group <- gsub("\\S+\\.", "", sample_names) 
 sample_code <- paste0("B:", batch_id, "_D:", sample_group) 
+
+# Get gene identifiers
+gene_id <- data_list[[1]][, 1] 
+gene_names <- data_list[[1]][, 2] 
+gene_labels <- paste(gene_id, gene_names, sep = ":") 
+
+# Assign column names and row names
 colnames(data_mat) <- sample_code 
 rownames(data_mat) <- gene_id 
 
@@ -115,7 +117,7 @@ mapply(file.rename, mf_outputs, mf_outputs_type2)
 rm(mf_outputs, mf_outputs_type2)
 
 ## Step 7. Define an R function to identify genes which have fulfilled the given criteria
-candidate.genes.parser <- function(input_file, DE = NULL, SVDE = NULL, nline = NULL, out_col = NULL, ...){
+candidate_genes_parser <- function(input_file, DE = NULL, SVDE = NULL, nline = NULL, out_col = NULL, ...){
     input_tab <- read.delim(input_file)
     rii <- 1:nrow(input_tab)
     if(!is.null(DE)){
@@ -139,8 +141,8 @@ candidate.genes.parser <- function(input_file, DE = NULL, SVDE = NULL, nline = N
 }
 
 ## Step 8. Get candidate monotonic key genes
-MF_type1_genes <- candidate.genes.parser("MFSelector_Type1.txt", DE = 4)
-MF_type2_genes <- candidate.genes.parser("MFSelector_Type2.txt", DE = 4)
+MF_type1_genes <- candidate_genes_parser("MFSelector_Type1.txt", DE = 4)
+MF_type2_genes <- candidate_genes_parser("MFSelector_Type2.txt", DE = 4)
 
 ## Step 9. Find the indices of candidate genes
 mii_type1 <- match(MF_type1_genes, gene_labels)
@@ -160,7 +162,7 @@ z_transformation <- function(x){(x-mean(x))/sd(x)}
 ward_hclust <- function(d){hclust(d, method = "ward.D")}
 
 # Define a function to generate a heatmap
-get_heatmap<-function(prefix, data, sample_group, gene_symbols = NULL, ...){
+get_heatmap<-function(prefix, data, sample_group, gene_symbols = NULL){
     sample_col_fac <- as.factor(sample_group)    
     n_group <- sample_group |> unique() |> length()                    
     dataZ <- apply(data, 1, z_transformation) |> t()
@@ -193,10 +195,6 @@ get_heatmap("GSE140914_Type2", data_mat[mii_type2, ], sample_group, gene_symbols
 get_heatmap("GSE140914_Type1+2", data_mat[c(mii_type1, mii_type2), ], sample_group, gene_symbols = gene_labels[c(mii_type1, mii_type2)])
 
 ## Step 12. Generate scatter plots with these candidate genes
-# Import the output text files of MFSelector
-mf_tab_1 <- read.delim("MFSelector_Type1.txt", header = TRUE)
-mf_tab_2 <- read.delim("MFSelector_Type2.txt", header = TRUE)
-
 # Define a function to generate scatter plot with ggplot2
 get_scatter_plots <- function(my_gene_id, data, gene_id, sample_group, mf_tab){
     mii1 <- which(gene_id == my_gene_id)
@@ -234,6 +232,10 @@ get_scatter_plots <- function(my_gene_id, data, gene_id, sample_group, mf_tab){
         print(p)        
     }
 }
+
+# Import the output text files of MFSelector
+mf_tab_1 <- read.delim("MFSelector_Type1.txt", header = TRUE)
+mf_tab_2 <- read.delim("MFSelector_Type2.txt", header = TRUE)
 
 # Generate scatter plots with these candidate genes
 get_scatter_plots(MF_type1_genes[1], data_mat, gene_labels, sample_group, mf_tab_1)
