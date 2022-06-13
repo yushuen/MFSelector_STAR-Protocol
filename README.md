@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/445402890.svg)](https://zenodo.org/badge/latestdoi/445402890)
+
 # A parallel computing version of MFSelector based on doSNOW package
 The original version of MFSelector (Monotonic Feature Selector) can be download via its [official site](http://microarray.ym.edu.tw:8080/tools/module/MFSelector/index.jsp?mode=home). We made minimum modifications of the original R code to enable it can perform parallel computing based on doSNOW package. We propose this version as a solution for parallel MFSelector on Windows platform.
 
